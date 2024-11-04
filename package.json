@@ -1,16 +1,16 @@
 {
-  "name": "notionpdfgenerator",
+  "name": "notionpdfgeneratorweb",
   "version": "1.0.0",
   "description": "Converts a zip html-export from Notion.so to a combined PDF",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Alexander Nørup",
+  "author": "cloudier338",
   "license": "ISC",
   "dependencies": {
     "archiver": "^7.0.1",
-    "chrome-aws-lambda": "^10.1.0",
+    "chrome-aws-lambda": "^9.1.0",
     "express": "^4.21.1",
     "express-fileupload": "^1.5.1",
     "pdf-merger-js": "^3.4.0",
