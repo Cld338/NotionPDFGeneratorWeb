@@ -1,21 +1,21 @@
 const express = require('express');
 const fileUpload = require('express-fileupload');
-const puppeteer = require('puppeteer');
+const chrome = require('chrome-aws-lambda'); // chrome-aws-lambda 추가
+const puppeteer = require('puppeteer-core'); // puppeteer-core 추가
 const unzipper = require('unzipper');
 const archiver = require('archiver');
 const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../public')));
 app.use(fileUpload());
 
+// 기본 경로에서 index.html 제공
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
-
 
 // PDF 변환 함수
 const printPdf = async (filePath, options, fileIndex, totalFiles) => {
@@ -23,7 +23,13 @@ const printPdf = async (filePath, options, fileIndex, totalFiles) => {
     console.log(`Converting ${path.basename(filePath)} to PDF...`);
     console.log(`Converting ${fileIndex}/${totalFiles}...`);
 
-    const browser = await puppeteer.launch({ headless: true });
+    // Puppeteer 브라우저 옵션 설정
+    const browser = await puppeteer.launch({
+        args: chrome.args,
+        executablePath: await chrome.executablePath,
+        headless: chrome.headless
+    });
+
     const page = await browser.newPage();
 
     await page.goto(`file://${filePath}`, { waitUntil: 'networkidle2' });
@@ -111,15 +117,17 @@ app.post('/upload', async (req, res) => {
     };
 
     const zipFile = req.files.zipFile;
-    const extractDir = path.join("/tmp", 'extracted');
-    const outputDir = path.join("/tmp", 'out');
+    
+    // /tmp 디렉토리를 사용하여 임시 파일 및 폴더 생성
+    const extractDir = path.join('/tmp', 'extracted');
+    const outputDir = path.join('/tmp', 'out');
 
     if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir);
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
     console.log('Starting to unzip the file...');
-    await fs.promises.writeFile(path.join("/tmp", zipFile.name), zipFile.data);
-    await fs.createReadStream(path.join("/tmp", zipFile.name))
+    await fs.promises.writeFile(path.join('/tmp', zipFile.name), zipFile.data);
+    await fs.createReadStream(path.join('/tmp', zipFile.name))
         .pipe(unzipper.Extract({ path: extractDir }))
         .promise();
     console.log('Unzipping completed.');
@@ -142,7 +150,7 @@ app.post('/upload', async (req, res) => {
 
     console.log('PDF conversion completed. Preparing files for download...');
 
-    const zipOutput = path.join("/tmp", 'pdfs.zip');
+    const zipOutput = path.join('/tmp', 'pdfs.zip');
     const output = fs.createWriteStream(zipOutput);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
@@ -151,6 +159,7 @@ app.post('/upload', async (req, res) => {
         res.download(zipOutput, 'pdfs.zip', async (err) => {
             if (err) console.error(err);
 
+            // 파일 정리
             fs.unlinkSync(zipOutput);
             fs.rmSync(extractDir, { recursive: true, force: true });
             fs.rmSync(outputDir, { recursive: true, force: true });
@@ -169,10 +178,6 @@ app.post('/upload', async (req, res) => {
     });
 
     await archive.finalize();
-});
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
 });
 
 module.exports = app;
