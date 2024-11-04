@@ -111,15 +111,15 @@ app.post('/upload', async (req, res) => {
     };
 
     const zipFile = req.files.zipFile;
-    const extractDir = path.join(__dirname, 'public/extracted');
-    const outputDir = path.join(__dirname, 'public/out');
+    const extractDir = path.join("/tmp", 'extracted');
+    const outputDir = path.join("/tmp", 'out');
 
     if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir);
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
     console.log('Starting to unzip the file...');
-    await fs.promises.writeFile(path.join(__dirname, zipFile.name), zipFile.data);
-    await fs.createReadStream(path.join(__dirname, zipFile.name))
+    await fs.promises.writeFile(path.join("/tmp", zipFile.name), zipFile.data);
+    await fs.createReadStream(path.join("/tmp", zipFile.name))
         .pipe(unzipper.Extract({ path: extractDir }))
         .promise();
     console.log('Unzipping completed.');
@@ -142,7 +142,7 @@ app.post('/upload', async (req, res) => {
 
     console.log('PDF conversion completed. Preparing files for download...');
 
-    const zipOutput = path.join(__dirname, 'pdfs.zip');
+    const zipOutput = path.join("/tmp", 'pdfs.zip');
     const output = fs.createWriteStream(zipOutput);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
