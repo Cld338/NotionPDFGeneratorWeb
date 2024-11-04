@@ -8,12 +8,12 @@ const path = require('path');
 
 const app = express();
 
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static('public'));
 app.use(fileUpload());
 
 // 기본 경로에서 index.html 제공
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // PDF 변환 함수
