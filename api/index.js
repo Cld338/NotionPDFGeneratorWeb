@@ -12,6 +12,11 @@ const PORT = 3000;
 app.use(express.static('public'));
 app.use(fileUpload());
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+
 // PDF 변환 함수
 const printPdf = async (filePath, options, fileIndex, totalFiles) => {
     const { width, includeBanner, includeTitle, includeTags } = options;
@@ -166,8 +171,8 @@ app.post('/upload', async (req, res) => {
     await archive.finalize();
 });
 
-// app.listen(PORT, () => {
-//     console.log(`Server is running on port ${PORT}`);
-// });
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
 
 module.exports = app;
