@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Style PDF Converter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">📄 Notion Style PDF Converter</h1>
+        <p class="subtitle">Upload your Notion ZIP file and configure your PDF export options.</p>
+
+        <form id="uploadForm" class="card" enctype="multipart/form-data">
+            <label class="file-upload">
+                <input type="file" id="zipFile" name="zipFile" accept=".zip" required>
+                <span id="fileLabel">Select ZIP File</span>
+            </label>
+            <p id="selectedFileName" class="file-name"></p> <!-- Displays selected file name -->
+
+            <div class="options">
+                <label class="option">
+                    <input type="checkbox" id="includeBanner" name="includeBanner" checked>
+                    <span>Include Banner</span>
+                </label>
+
+                <label class="option">
+                    <input type="checkbox" id="includeTitle" name="includeTitle" checked>
+                    <span>Include Title</span>
+                </label>
+
+                <label class="option">
+                    <input type="checkbox" id="includeTags" name="includeTags" checked>
+                    <span>Include Tags</span>
+                </label>
+
+                <label class="option">
+                    <span>Width (px):</span>
+                    <input type="text" id="width" name="width" value="1440">
+                </label>
+            </div>
+
+            <button type="submit" class="submit-btn">Convert to PDF</button>
+        </form>
+
+        <p id="message" class="message"></p>
+        <div id="logs" class="log-container">
+            <strong>Logs:</strong>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let socketId;
+
+        // Retrieve and store socket ID
+        socket.on('socketId', (id) => {
+            socketId = id;
+        });
+
+        // Display server log messages in real-time
+        socket.on('log', (message) => {
+            const logDiv = document.getElementById('logs');
+            const logMessage = document.createElement('div');
+            logMessage.classList.add('log-message');
+            logMessage.innerText = message;
+            logDiv.appendChild(logMessage);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        });
+
+        socket.on('message', (message) => {
+            document.getElementById("message").innerText=message;
+        });
+
+        // Display selected file name
+        document.getElementById('zipFile').addEventListener('change', function() {
+            const fileName = this.files[0] ? this.files[0].name : "No file selected";
+            document.getElementById('selectedFileName').innerText = fileName;
+        });
+
+        // Handle form submission and file upload
+        document.getElementById('uploadForm').onsubmit = async function(event) {
+            event.preventDefault();
+            const zipFile = document.getElementById('zipFile').files[0];
+            if (!zipFile) {
+                alert('Please select a ZIP file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('zipFile', zipFile);
+            formData.append('width', document.getElementById('width').value + 'px');
+            formData.append('includeBanner', document.getElementById('includeBanner').checked);
+            formData.append('includeTitle', document.getElementById('includeTitle').checked);
+            formData.append('includeTags', document.getElementById('includeTags').checked);
+
+            document.getElementById('message').innerText = 'Converting...';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'x-socket-id': socketId }
+                });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'pdfs.zip';
+                    link.click();
+                    document.getElementById('message').innerText = 'Conversion complete! Download started.';
+                } else {
+                    document.getElementById('message').innerText = 'Conversion failed. Please try again.';
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('message').innerText = 'An error occurred during conversion.';
+            }
+        };
+    </script>
+</body>
+</html>
