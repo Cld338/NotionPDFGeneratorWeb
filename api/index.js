@@ -111,8 +111,8 @@ app.post('/upload', async (req, res) => {
     };
 
     const zipFile = req.files.zipFile;
-    const extractDir = path.join(__dirname, 'extracted');
-    const outputDir = path.join(__dirname, 'out');
+    const extractDir = path.join(__dirname, 'public/extracted');
+    const outputDir = path.join(__dirname, 'public/out');
 
     if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir);
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
