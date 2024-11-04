@@ -117,29 +117,6 @@ body {
 }
 
 /* Message styling */
-.message {
-    color: #666;
-    font-size: 0.9em;
-    margin-bottom: 1em;
-}
-
-/* Log container styling */
-.log-container {
-    background-color: #f9fafb;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-    padding: 15px;
-    max-height: 200px;
-    overflow-y: auto;
-    text-align: left;
-    font-size: 0.9em;
-    color: #444;
-}
-
-.log-message {
-    padding: 5px 0;
-    border-bottom: 1px solid #eee;
-}
 
 .file-name {
     color: #555;
