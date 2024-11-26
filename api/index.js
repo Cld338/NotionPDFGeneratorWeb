@@ -1,10 +1,11 @@
 const express = require('express');
 const fileUpload = require('express-fileupload');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const unzipper = require('unzipper');
 const archiver = require('archiver');
 const fs = require('fs');
 const path = require('path');
+const chromium = require('chrome-aws-lambda');
 
 const app = express();
 
@@ -22,82 +23,92 @@ const printPdf = async (filePath, options, fileIndex, totalFiles) => {
     console.log(`Converting ${path.basename(filePath)} to PDF...`);
     console.log(`Converting ${fileIndex}/${totalFiles}...`);
 
-    // Vercel에서 호환 가능한 Chromium 실행 파일 경로
+    // Chrome AWS Lambda 설정으로 변경
     const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        executablePath: '/usr/bin/chromium-browser' // Vercel에서 사용할 수 있는 Chromium 경로
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath,
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
     });
 
-    const page = await browser.newPage();
+    try {
+        const page = await browser.newPage();
+        
+        // HTML 파일 내용을 직접 읽어서 setContent로 설정
+        const htmlContent = await fs.promises.readFile(filePath, 'utf8');
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
-    await page.goto(`file://${filePath}`, { waitUntil: 'networkidle2' });
+        await page.evaluate((options) => {
+            const { includeBanner, includeTitle, includeTags } = options;
 
-    await page.evaluate((options) => {
-        const { includeBanner, includeTitle, includeTags } = options;
+            if (!includeBanner) {
+                const banner = document.querySelector('.page-cover-image');
+                if (banner) banner.remove();
+            }
 
-        if (!includeBanner) {
-            const banner = document.querySelector('.page-cover-image');
-            if (banner) banner.remove();
-        }
+            if (!includeTitle) {
+                const title = document.querySelector('.page-title');
+                if (title) title.remove();
+            }
 
-        if (!includeTitle) {
-            const title = document.querySelector('.page-title');
-            if (title) title.remove();
-        }
+            if (!includeTags) {
+                const tags = document.querySelector('.properties');
+                if (tags) tags.remove();
+            }
 
-        if (!includeTags) {
-            const tags = document.querySelector('.properties');
-            if (tags) tags.remove();
-        }
+            const headerIcon = document.querySelector('.page-header-icon');
+            if (headerIcon && !includeBanner) {
+                headerIcon.style.display = 'inline';
+            }
+        }, { includeBanner, includeTitle, includeTags });
 
-        const headerIcon = document.querySelector('.page-header-icon');
-        if (headerIcon && !includeBanner) {
-            headerIcon.style.display = 'inline';
-        }
-    }, { includeBanner, includeTitle, includeTags });
-
-    await page.evaluate(async () => {
-        const images = Array.from(document.images);
-        await Promise.all(images.map(img => {
-            if (img.complete) return Promise.resolve();
-            return new Promise(resolve => (img.onload = img.onerror = resolve));
-        }));
-    });
-
-    const bodyHeight = await page.evaluate(() => {
-        const body = document.body;
-        const html = document.documentElement;
-        const images = Array.from(document.images);
-        let totalImageHeight = 0;
-
-        images.forEach((img) => {
-            const rect = img.getBoundingClientRect();
-            totalImageHeight += rect.height;
+        await page.evaluate(async () => {
+            const images = Array.from(document.images);
+            await Promise.all(images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => (img.onload = img.onerror = resolve));
+            }));
         });
 
-        return Math.max(
-            body.scrollHeight,
-            body.offsetHeight,
-            html.clientHeight,
-            html.scrollHeight,
-            html.offsetHeight
-        ) + totalImageHeight;
-    });
+        const bodyHeight = await page.evaluate(() => {
+            const body = document.body;
+            const html = document.documentElement;
+            const images = Array.from(document.images);
+            let totalImageHeight = 0;
 
-    page.setViewport({ width: parseInt(width), height: Math.ceil(bodyHeight) });
+            images.forEach((img) => {
+                const rect = img.getBoundingClientRect();
+                totalImageHeight += rect.height;
+            });
 
-    const pdfBuffer = await page.pdf({
-        width: width,
-        height: `${Math.ceil(bodyHeight)}px`,
-        printBackground: true,
-        displayHeaderFooter: false,
-        margin: { top: '0px', bottom: '0px', left: '0px', right: '0px' },
-    });
+            return Math.max(
+                body.scrollHeight,
+                body.offsetHeight,
+                html.clientHeight,
+                html.scrollHeight,
+                html.offsetHeight
+            ) + totalImageHeight;
+        });
 
-    await browser.close();
+        page.setViewport({ width: parseInt(width), height: Math.ceil(bodyHeight) });
 
-    console.log(`Converted ${path.basename(filePath)} to PDF`);
-    return pdfBuffer;
+        const pdfBuffer = await page.pdf({
+            width: width,
+            height: `${Math.ceil(bodyHeight)}px`,
+            printBackground: true,
+            displayHeaderFooter: false,
+            margin: { top: '0px', bottom: '0px', left: '0px', right: '0px' },
+        });
+
+        console.log(`Converted ${path.basename(filePath)} to PDF`);
+        return pdfBuffer;
+    } catch (error) {
+        console.error('PDF 변환 중 오류 발생:', error);
+        throw error;
+    } finally {
+        await browser.close();
+    }
 };
 
 // ZIP 파일 압축 해제 및 PDF 변환

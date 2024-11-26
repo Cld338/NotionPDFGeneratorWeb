@@ -10,10 +10,12 @@
   "license": "ISC",
   "dependencies": {
     "archiver": "^7.0.1",
+    "chrome-aws-lambda": "^6.0.0",
     "express": "^4.21.1",
     "express-fileupload": "^1.5.1",
     "pdf-merger-js": "^3.4.0",
     "puppeteer": "^5.5.0",
+    "puppeteer-core": "^6.0.0",
     "sharp": "^0.33.5",
     "socket.io": "^4.8.1",
     "twemoji": "^14.0.2",
