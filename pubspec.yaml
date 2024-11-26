@@ -1,0 +1,9 @@
+dependencies:
+  flutter:
+    sdk: flutter
+  file_picker: ^5.3.1
+  path_provider: ^2.0.15
+  archive: ^3.3.7
+  webview_flutter: ^4.2.2
+  permission_handler: ^10.4.3
+  share_plus: ^7.0.2
