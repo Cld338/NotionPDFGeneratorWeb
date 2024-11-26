@@ -8,7 +8,7 @@ const path = require('path');
 
 const app = express();
 
-app.use(express.static('public'));
+app.use(express.static(__dirname + '/public'));
 app.use(fileUpload());
 
 // 기본 경로에서 index.html 제공
@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// PDF 변환 함수
+// PDF 변환 함수tm
 const printPdf = async (filePath, options, fileIndex, totalFiles) => {
     const { width, includeBanner, includeTitle, includeTags } = options;
     console.log(`Converting ${path.basename(filePath)} to PDF...`);
@@ -120,8 +120,8 @@ app.post('/upload', async (req, res) => {
     const extractDir = path.join('/tmp', 'extracted');
     const outputDir = path.join('/tmp', 'out');
 
-    if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir);
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+    if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true });
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
     console.log('Starting to unzip the file...');
     await fs.promises.writeFile(path.join('/tmp', zipFile.name), zipFile.data);
@@ -178,4 +178,5 @@ app.post('/upload', async (req, res) => {
     await archive.finalize();
 });
 
+// Vercel을 위한 export 설정
 module.exports = app;
