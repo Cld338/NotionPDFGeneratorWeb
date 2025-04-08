@@ -153,10 +153,7 @@
             };
 
             try {
-                const baseURL = window.location.origin.includes("localhost")
-                    ? "http://localhost:3000"
-                    : "https://word-chain-devcourse.vercel.app";
-                const response = await fetch(`${baseURL}/api/convert-url`, {
+                const response = await fetch('/api/convert-url', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
