@@ -1,241 +1,424 @@
+// const express = require('express');
+// const puppeteer = require('puppeteer');
+// const fs = require('fs');
+// const path = require('path');
+// const https = require('https');
+// const { URL } = require('url'); // Built-in URL parser
+
+// const app = express();
+// const PORT = 3000;
+
+// // Middleware to parse JSON bodies
+// app.use(express.json());
+// // Middleware to parse URL-encoded bodies (optional, but good practice)
+// app.use(express.urlencoded({ extended: true }));
+
+// // Serve static files (like your index.html if needed for the UI)
+// app.use(express.static(path.join(__dirname, 'public')));
+
+// // --- Removed WebSocket and file upload/unzip/zip logic ---
+
+// // --- Modified PDF Conversion Function ---
+// // Now takes a URL instead of a file path
+// const printPdfFromUrl = async (targetUrl, options) => {
+//     // Destructure options with defaults
+//     const { width = '1080px', includeBanner = false, includeTitle = false, includeTags = false } = options;
+
+//     console.log(`Converting URL ${targetUrl} to PDF...`);
+//     console.log(`Options: width=${width}, banner=${includeBanner}, title=${includeTitle}, tags=${includeTags}`);
+
+//     let browser;
+//     try {
+//         browser = await puppeteer.launch({
+//             headless: true,
+//             args: ['--no-sandbox', '--disable-setuid-sandbox'] // Common args for server environments
+//         });
+//         const page = await browser.newPage();
+
+//         // Set a reasonable default viewport height initially
+//         await page.setViewport({ width: parseInt(width), height: 100 });
+
+//         // Navigate to the URL
+//         await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 60000 }); // Increased timeout, networkidle0 waits for fewer network connections
+
+//         // --- DOM Manipulation (Important Note!) ---
+//         // The selectors used here (.page-cover-image, .page-title, .properties)
+//         // were specific to the Notion export format in your original code.
+//         // These selectors will likely NOT WORK on arbitrary websites.
+//         // You might need to:
+//         // 1. Remove this section if you want a general URL-to-PDF converter.
+//         // 2. Make the selectors configurable if you target specific site structures.
+//         // 3. Use more generic approaches if applicable (though difficult).
+//         await page.evaluate((evalOptions) => {
+//             const { includeBanner, includeTitle, includeTags } = evalOptions;
+
+//             // Attempt to remove elements based on the *original* selectors
+//             // This part is highly likely to fail on general websites
+//             if (!includeBanner) {
+//                 const banner = document.querySelector('.page-cover-image');
+//                 if (banner) banner.remove();
+//                 // Notion specific icon adjustment - likely irrelevant now
+//                 // const headerIcon = document.querySelector('.page-header-icon');
+//                 // if (headerIcon) headerIcon.style.display = 'inline';
+//             }
+//             if (!includeTitle) {
+//                 const title = document.querySelector('.page-title');
+//                 if (title) title.remove();
+//             }
+//             if (!includeTags) {
+//                 const tags = document.querySelector('.properties');
+//                 if (tags) tags.remove();
+//             }
+//         }, { includeBanner, includeTitle, includeTags }); // Pass options correctly
+
+//         // Ensure all images are loaded (best effort)
+//         await page.evaluate(async () => {
+//             const selectors = Array.from(document.querySelectorAll("img"));
+//             await Promise.all(
+//                 selectors.map(img => {
+//                     if (img.complete) return;
+//                     return new Promise((resolve, reject) => {
+//                         img.addEventListener("load", resolve);
+//                         img.addEventListener("error", resolve); // Resolve on error too to not block PDF generation
+//                     });
+//                 })
+//             );
+//         });
+
+//         // 높이 재계산
+//         const calculateBodyHeight = async () => {
+//             return await page.evaluate(() => {
+//                 const body = document.body;
+//                 const html = document.documentElement;
+//                 const images = Array.from(document.images);
+//                 let totalImageHeight = 0;
+
+//                 images.forEach((img) => {
+//                     const rect = img.getBoundingClientRect();
+//                     totalImageHeight += rect.height;
+//                 });
+//                 const targetElement = document.querySelector('#notion-app > div > div:nth-child(1) > div > div:nth-child(1) > main > div > div > div.whenContentEditable > div');
+
+//                 if (targetElement) {
+//                     const rect = targetElement.getBoundingClientRect();
+//                     console.log('Width:', rect.width, 'Height:', rect.height);
+//                     return Math.max(
+//                         rect.height
+//                     );
+//                 } else {
+//                     console.log('#notion-app 요소를 찾을 수 없습니다.');
+//                 }
+
+                
+//             });
+//         };
+
+//         const bodyHeight = await calculateBodyHeight();
+
+//         page.setViewport({ width: parseInt(width), height: Math.ceil(bodyHeight)});
+
+//         const pdfBuffer = await page.pdf({
+//             width: width,
+//             height: `${Math.ceil(bodyHeight)}px`,
+//             printBackground: true,
+//             displayHeaderFooter: false,
+//             margin: { top: '0px', bottom: '0px', left: '0px', right: '0px' },
+//         });
+//             console.log(`Successfully converted ${targetUrl} to PDF`);
+//             return pdfBuffer;
+
+//     } catch (error) {
+//         console.error(`Error converting URL ${targetUrl} to PDF:`, error);
+//         throw error; // Re-throw the error to be caught by the route handler
+//     } finally {
+//         if (browser) {
+//             await browser.close();
+//             console.log('Browser closed.');
+//         }
+//     }
+// };
+    
+
+// // --- New Endpoint for URL Conversion ---
+// app.post('/convert-url', async (req, res) => {
+//     const { url: targetUrl, width, includeBanner, includeTitle, includeTags } = req.body;
+
+//     // Basic URL validation
+//     if (!targetUrl) {
+//         return res.status(400).send({ error: 'Missing "url" in request body.' });
+//     }
+//     try {
+//         new URL(targetUrl); // Check if it's a valid URL format
+//     } catch (error) {
+//         return res.status(400).send({ error: 'Invalid URL format provided.' });
+//     }
+
+//     // Prepare options for the conversion function
+//     const options = {
+//         width: width || '1080px', // Default width if not provided
+//         // Convert string 'true'/'false' from form data/JSON to boolean
+//         includeBanner: String(includeBanner).toLowerCase() === 'true',
+//         includeTitle: String(includeTitle).toLowerCase() === 'true',
+//         includeTags: String(includeTags).toLowerCase() === 'true'
+//     };
+
+//     try {
+//         const pdfBuffer = await printPdfFromUrl(targetUrl, options);
+        
+
+//         // Generate a filename (optional, enhances download UX)
+//         let filename = "converted.pdf";
+//         try {
+//             const parsedUrl = new URL(targetUrl);
+//             filename = `${parsedUrl.hostname || 'page'}.pdf`;
+//         } catch { /* Ignore errors in filename generation */ }
+
+
+//         // Set headers for PDF download
+//         res.setHeader('Content-Type', 'application/pdf');
+//         res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+//         res.setHeader('Content-Length', pdfBuffer.length);
+
+//         // Send the PDF buffer as the response
+//         res.send(pdfBuffer);
+
+//     } catch (error) {
+//         // Log the detailed error on the server
+//         console.error(`Failed to process URL ${targetUrl}:`, error);
+//         // Send a generic error message to the client
+//         res.status(500).send({ error: 'Failed to convert URL to PDF. Check server logs for details.' });
+//     }
+// });
+
+// // --- Root Route and Server Start ---
+// // In server.js (should already be there)
+// app.use(express.static(path.join(__dirname, 'public')));
+
+// app.get('/', (req, res) => {
+//     res.sendFile(path.join(__dirname, 'public', 'index2.html'));
+// });
+// // Optional: Keep for SSL certificate validation if needed
+// app.get('/.well-known/pki-validation/66B0E0B1136DC206C31602BD6C6FC952.txt', (req, res) => {
+//     res.sendFile(path.join(__dirname, 'public', '66B0E0B1136DC206C31602BD6C6FC952.txt'));
+// });
+
+// // Start HTTP server (or HTTPS if you uncomment the section below)
+// app.listen(PORT, () => {
+//     console.log(`Server is running on http://localhost:${PORT}`); // Use HTTP for local dev
+// });
+
+// /*
+// // --- HTTPS Server Setup (Example - Needs actual certificate files) ---
+// // const httpsOptions = {
+// //   key: fs.readFileSync('path/to/your/private.key'), // Replace with actual path
+// //   cert: fs.readFileSync('path/to/your/certificate.crt') // Replace with actual path
+// // };
+// //
+// // https.createServer(httpsOptions, app).listen(PORT, () => {
+// //   console.log(`HTTPS Server is running on https://localhost:${PORT}`);
+// // });
+// */
+
+// module.exports = app; // Export for potential testing or modular use
 const express = require('express');
-const fileUpload = require('express-fileupload');
 const puppeteer = require('puppeteer');
-const unzipper = require('unzipper');
-const archiver = require('archiver');
-const fs = require('fs');
+// const fs = require('fs');
 const path = require('path');
-const WebSocket = require('ws');
-const https = require('https');
+// const https = require('https');
+const { URL } = require('url'); // Built-in URL parser
+// const pdfParse = require('pdf-parse'); // Import the pdf-parse library
+// const { PDFDocument, rgb } = require('pdf-lib'); // Import PDFDocument and rgb from pdf-lib
 
 const app = express();
-const PORT = 3001;
+const PORT = 3000;
 
+// Middleware to parse JSON bodies
+app.use(express.json());
+// Middleware to parse URL-encoded bodies (optional, but good practice)
+app.use(express.urlencoded({ extended: true }));
 
+// Serve static files (like your index.html if needed for the UI)
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(
-    fileUpload({
-        limits: { fileSize: 50 * 1024 * 1024 }, // 50MB 제한 설정
-        abortOnLimit: true, // 파일 크기가 제한을 초과하면 요청을 중단
-    })
-);
 
-const wss = new WebSocket.Server(
-    {
-        noServer: true,
-    }
-);
+// --- Removed WebSocket and file upload/unzip/zip logic ---
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index2.html'));
-});
+// --- Modified PDF Conversion Function ---
+// Now takes a URL instead of a file path
+const printPdfFromUrl = async (targetUrl, options) => {
+    // Destructure options with defaults
+    const { width = '1080px', includeBanner = false, includeTitle = false, includeTags = false } = options;
 
+    console.log(`Converting URL ${targetUrl} to PDF...`);
+    console.log(`Options: width=${width}, banner=${includeBanner}, title=${includeTitle}, tags=${includeTags}`);
 
-// PDF 변환 함수
-const printPdf = async (filePath, options, fileIndex, totalFiles) => {
-    const { width, includeBanner, includeTitle, includeTags } = options;
-    console.log(`Converting ${path.basename(filePath)} to PDF...`);
-    console.log(`Converting ${fileIndex}/${totalFiles}...`);
-
-    const browser = await puppeteer.launch({
+    let browser;
+    browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-config']
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] // Common args for server environments
     });
     const page = await browser.newPage();
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
-    await page.goto(`file://${filePath}`, { waitUntil: 'networkidle2' });
 
-    await page.evaluate((options) => {
-        const { includeBanner, includeTitle, includeTags } = options;
+    // Set a reasonable default viewport height initially
+    await page.setViewport({ width: parseInt(width), height: 100 });
 
+    // Navigate to the URL
+    await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 60000 }); // Increased timeout, networkidle0 waits for fewer network connections
+
+    await page.evaluate((evalOptions) => {
+        const { includeBanner, includeTitle, includeTags } = evalOptions;
         if (!includeBanner) {
             const banner = document.querySelector('.page-cover-image');
             if (banner) banner.remove();
         }
-
         if (!includeTitle) {
             const title = document.querySelector('.page-title');
             if (title) title.remove();
         }
-
         if (!includeTags) {
             const tags = document.querySelector('.properties');
             if (tags) tags.remove();
         }
+        const links = document.querySelectorAll('div.notion-selectable.notion-table_of_contents-block > div > div > a');
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            const hashIndex = href.indexOf('#');
+            if (hashIndex !== -1) {
+                const hash = href.substring(hashIndex);
+                link.setAttribute('href', hash);
+                link.setAttribute('role', "");
+            } else {
+                console.log("Warning: No hash found in href:", href);
+            }
+        });
+    }, { includeBanner, includeTitle, includeTags }); // Pass options correctly
 
-        const headerIcon = document.querySelector('.page-header-icon');
-        if (headerIcon && !includeBanner) {
-            headerIcon.style.display = 'inline';
-        }
-    }, { includeBanner, includeTitle, includeTags });
-
+    // Ensure all images are loaded (best effort)
     await page.evaluate(async () => {
-        const images = Array.from(document.images);
-        await Promise.all(images.map(img => {
-            if (img.complete) return Promise.resolve();
-            return new Promise(resolve => (img.onload = img.onerror = resolve));
-        }));
+        const selectors = Array.from(document.querySelectorAll("img"));
+        await Promise.all(
+            selectors.map(img => {
+                if (img.complete) return;
+                return new Promise((resolve, reject) => {
+                    img.addEventListener("load", resolve);
+                    img.addEventListener("error", resolve); // Resolve on error too to not block PDF generation
+                });
+            })
+        );
     });
 
     // 높이 재계산
     const calculateBodyHeight = async () => {
         return await page.evaluate(() => {
-            const body = document.body;
-            const html = document.documentElement;
-            const images = Array.from(document.images);
-            let totalImageHeight = 0;
+            const targetElement = document.querySelector('#notion-app > div > div:nth-child(1) > div > div:nth-child(1) > main > div > div > div.whenContentEditable > div');
 
-            images.forEach((img) => {
-                const rect = img.getBoundingClientRect();
-                totalImageHeight += rect.height;
-            });
+            if (targetElement) {
+                const rect = targetElement.getBoundingClientRect();
+                console.log('Width:', rect.width, 'Height:', rect.height);
+                return Math.max(
+                    rect.height
+                );
+            } else {
+                console.log('#notion-app 요소를 찾을 수 없습니다.');
+            }
 
-            return Math.max(
-                body.scrollHeight,
-                body.offsetHeight,
-                html.clientHeight,
-                html.scrollHeight,
-                html.offsetHeight
-            ) + totalImageHeight;
+
         });
     };
 
     const bodyHeight = await calculateBodyHeight();
 
-    page.setViewport({ width: parseInt(width), height: Math.ceil(bodyHeight) });
+    page.setViewport({ width: parseInt(width), height: Math.ceil(bodyHeight)});
 
-    const pdfBuffer = await page.pdf({
+    const fullPdfBuffer = await page.pdf({
         width: width,
         height: `${Math.ceil(bodyHeight)}px`,
         printBackground: true,
         displayHeaderFooter: false,
         margin: { top: '0px', bottom: '0px', left: '0px', right: '0px' },
+        pageRanges: '1',
+        tagged: true,
+        outline: true,
     });
+    console.log(`Successfully converted ${targetUrl} to PDF`);
+    return fullPdfBuffer;
 
-    await browser.close();
-
-    console.log(`Converted ${path.basename(filePath)} to PDF`);
-    return pdfBuffer;
 };
 
 
-app.post('/upload', async (req, res) => {
-    if (!req.files || !req.files.zipFile) {
-        return res.status(400).send('No files were uploaded.');
+// --- New Endpoint for URL Conversion ---
+app.post('/convert-url', async (req, res) => {
+    const { url: targetUrl, width, includeBanner, includeTitle, includeTags } = req.body;
+
+    // Basic URL validation
+    if (!targetUrl) {
+        return res.status(400).send({ error: 'Missing "url" in request body.' });
+    }
+    try {
+        new URL(targetUrl); // Check if it's a valid URL format
+    } catch (error) {
+        return res.status(400).send({ error: 'Invalid URL format provided.' });
     }
 
-    if (req.files.zipFile.truncated) { // 제한 초과 여부 확인
-        return res.status(413).send('File size exceeds the 50MB limit.');
-
-    }
-
-    const { width, includeBanner, includeTitle, includeTags } = req.body;
+    // Prepare options for the conversion function
     const options = {
-        width: width || '1080px',
-        includeBanner: includeBanner === 'true',
-        includeTitle: includeTitle === 'true',
-        includeTags: includeTags === 'true'
+        width: width || '1080px', // Default width if not provided
+        // Convert string 'true'/'false' from form data/JSON to boolean
+        includeBanner: String(includeBanner).toLowerCase() === 'true',
+        includeTitle: String(includeTitle).toLowerCase() === 'true',
+        includeTags: String(includeTags).toLowerCase() === 'true'
     };
 
-    const zipFile = req.files.zipFile;
-    const extractDir = path.join(__dirname, 'public/extracted');
-    const outputDir = path.join(__dirname, 'public/out');
-    const zipFilePath = path.join(__dirname, zipFile.name);
-
-    if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir);
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
-
-    console.log('Starting to unzip the file...');
-    await fs.promises.writeFile(zipFilePath, zipFile.data);
-    await fs.createReadStream(zipFilePath)
-        .pipe(unzipper.Extract({ path: extractDir }))
-        .promise();
-    console.log('Unzipping completed.');
-
-    const files = await fs.promises.readdir(extractDir);
-    const pdfFiles = [];
-    let index = 0;
-    const totalFiles = files.length;
-
-    for (const file of files) {
-        index++;
-        const filePath = path.join(extractDir, file);
-        if (path.extname(file) === '.html') {
-            const pdfBuffer = await printPdf(filePath, options, index, totalFiles);
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(`Converting ${index}/${totalFiles}: ${path.basename(file)}`);
-                }
-            });
-            const pdfName = `${path.basename(file, '.html')}.pdf`;
-            const pdfPath = path.join(outputDir, pdfName);
-            fs.writeFileSync(pdfPath, pdfBuffer, "utf-8");
-            pdfFiles.push(pdfPath);
+    try {
+        let urlFragment = '';
+        try {
+            const parsedUrl = new URL(targetUrl);
+            if (parsedUrl.hash) {
+                urlFragment = parsedUrl.hash.substring(1); // Remove the '#'
+                console.log('Extracted URL Fragment:', urlFragment);
+            }
+        } catch (fragmentError) {
+            console.error('Error extracting URL fragment:', fragmentError);
         }
+
+        const pdfBuffer = await printPdfFromUrl(targetUrl, options);
+        // Generate a filename (optional, enhances download UX)
+        let filename = "converted.pdf";
+        try {
+            const parsedUrl = new URL(targetUrl);
+            filename = `${parsedUrl.hostname || 'page'}.pdf`;
+        } catch { /* Ignore errors in filename generation */ }
+
+
+        // Set headers for PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+
+        // Send the PDF buffer as the response
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        // Log the detailed error on the server
+        console.error(`Failed to process URL ${targetUrl}:`, error);
+        // Send a generic error message to the client
+        res.status(500).send({ error: 'Failed to convert URL to PDF and modify links. Check server logs for details.' });
     }
+});
 
-    console.log('PDF conversion completed. Preparing files for download...');
+// --- Root Route and Server Start ---
+// In server.js (should already be there)
+app.use(express.static(path.join(__dirname, 'public')));
 
-    const zipOutput = path.join(__dirname, 'pdfs.zip');
-    const output = fs.createWriteStream(zipOutput);
-    const archive = archiver('zip', { zlib: { level: 9 } });
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index2.html'));
+});
 
-    output.on('close', async () => {
-        console.log('Zipping completed.');
-        res.download(zipOutput, 'pdfs.zip', async (err) => {
-            if (err) console.error(err);
-
-            fs.unlinkSync(zipFilePath);
-            fs.unlinkSync(zipOutput);
-
-            const extractedFiles = fs.readdirSync(extractDir);
-            for (const file of extractedFiles) {
-                const filePath = path.join(extractDir, file);
-                // if (fs.statSync(filePath).isDirectory()) {
-                    fs.rmSync(filePath, { recursive: true, force: true });
-                // }
-            }
-            const outputFiles = fs.readdirSync(outputDir);
-            for (const file of outputFiles) {
-                const filePath = path.join(outputDir, file);
-                // if (fs.statSync(filePath).isDirectory()) {
-                    fs.rmSync(filePath, { recursive: true, force: true });
-                // }
-            }
-            console.log('Cleanup completed.');
-        });
-    });
-
-    archive.on('error', (err) => {
-        console.error('Archive Error:', err);
-        res.status(500).send('An error occurred while creating the ZIP file.');
-    });
-
-    archive.pipe(output);
-    pdfFiles.forEach(pdf => {
-        archive.file(pdf, { name: Buffer.from(path.basename(pdf), 'utf8').toString() });
-    });
-
-    await archive.finalize();
+// Start HTTP server (or HTTPS if you uncomment the section below)
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`); // Use HTTP for local dev
 });
 
 
-// app.server = https.createServer(options, app).listen(PORT, () => { // http 대신 https.createServer 사용
-    // console.log(`Server is running on port ${PORT}`);
-// });
-
-app.server = app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
-app.get('/.well-known/pki-validation/66B0E0B1136DC206C31602BD6C6FC952.txt', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', '66B0E0B1136DC206C31602BD6C6FC952.txt'));
-});
-
-app.server.on('upgrade', (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-    });
-});
-
-module.exports = app;
+module.exports = app; // Export for potential testing or modular use
