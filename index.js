@@ -224,7 +224,7 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 const path = require('path');
 const { URL } = require('url'); // Built-in URL parser
-const chromium  = require("chromium-min")
+const chromium  = require("@sparticuz/chromium-min")
 const app = express();
 // Vercel 환경에서는 포트 번호를 직접 지정할 필요가 없습니다.
 const PORT = 3000;
