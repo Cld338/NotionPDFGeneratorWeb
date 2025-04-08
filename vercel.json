@@ -2,16 +2,12 @@
   "version": 2,
   "builds": [
     { "src": "index.js", "use": "@vercel/node" },
-    {
-      "src": "api/convert-url.js",
-      "use": "@vercel/node"
-    }
+		{ "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/index2.js" },
-    {
-      "src": "/api/convert-url",
-      "dest": "/api/convert-url.js"
-    }
+    { "src": "/(.*)", "dest": "/index.js" },
+    { "src": "/api/(.*)", "dest": "index.js" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "public/$1" }
   ]
 }
