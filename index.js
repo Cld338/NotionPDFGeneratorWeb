@@ -224,10 +224,11 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 const path = require('path');
 const { URL } = require('url'); // Built-in URL parser
-
+const chromium  = require("chromium-min")
 const app = express();
 // Vercel 환경에서는 포트 번호를 직접 지정할 필요가 없습니다.
 const PORT = 3000;
+const chromiumPack = "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar";
 
 // Middleware
 app.use(express.json());
@@ -256,7 +257,8 @@ const printPdfFromUrl = async (targetUrl, options) => {
                 // Vercel 메모리 제한 고려 필요시 추가 인수:
                 // '--disable-dev-shm-usage',
                 // '--single-process'
-            ]
+            ],
+            executablePath: await chromium.executablePath(chromiumPack),
         });
         const page = await browser.newPage();
         page.on('console', msg => console.log('PAGE LOG:', msg.text()));
