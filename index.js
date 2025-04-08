@@ -220,35 +220,25 @@
 // */
 
 // module.exports = app; // Export for potential testing or modular use
+// index.js
 const express = require('express');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// JSON 및 URL-encoded 요청 파싱
+// JSON과 URL-encoded 데이터 파싱 미들웨어 (필요시 사용)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 정적 파일 제공 (public 폴더 내 index.html 등)
+// public 폴더의 정적 파일 서빙
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Vercel API 엔드포인트를 모방하는 라우트 구성 (예시)
-// 실제 PDF 변환 기능은 '/api/convert-url.js'에서 구현한 내용을 require 할 수도 있습니다.
-const convertUrlHandler = require('./api/convert-url');
-app.post('/api/convert-url', (req, res) => {
-  // Express에서 API 핸들러 실행 (Promise 반환 방식 고려)
-  convertUrlHandler(req, res);
-});
-
-// 루트 경로: 정적 파일이 제공되므로 별도 라우트가 없어도 됨
+// 루트 경로 요청 시 index2.html 파일 전송
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index2.html'));
 });
 
-// 로컬 서버 실행
 app.listen(PORT, () => {
-  console.log(`서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-module.exports = app; // Export for potential testing or modular use

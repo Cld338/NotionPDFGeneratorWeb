@@ -1,128 +1,143 @@
+// api/convert-url.js
 const puppeteer = require('puppeteer');
 const { URL } = require('url');
 
-async function printPdfFromUrl(targetUrl, options) {
+/**
+ * 주어진 URL을 PDF로 변환하는 함수.
+ * @param {string} targetUrl - 변환 대상 URL.
+ * @param {object} options - PDF 생성 옵션 (width, includeBanner, includeTitle, includeTags)
+ * @returns {Buffer} PDF 데이터 버퍼
+ */
+const printPdfFromUrl = async (targetUrl, options) => {
   // 옵션 기본값 설정
   const { width = '1080px', includeBanner = false, includeTitle = false, includeTags = false } = options;
-
   console.log(`Converting URL ${targetUrl} to PDF...`);
   console.log(`Options: width=${width}, banner=${includeBanner}, title=${includeTitle}, tags=${includeTags}`);
 
-  // Vercel 환경에서는 puppeteer를 사용할 때 추가 설정이 필요할 수 있음
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  const page = await browser.newPage();
-
-  page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-
-  // 초기 뷰포트 설정
-  await page.setViewport({ width: parseInt(width), height: 100 });
-
-  // URL 로 이동 (대기 시간을 충분히 설정)
-  await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 60000 });
-
-  // 불필요한 요소 제거 (배너, 제목, 태그 등)
-  await page.evaluate((evalOptions) => {
-    const { includeBanner, includeTitle, includeTags } = evalOptions;
-    if (!includeBanner) {
-      const banner = document.querySelector('.page-cover-image');
-      if (banner) banner.remove();
-    }
-    if (!includeTitle) {
-      const title = document.querySelector('.page-title');
-      if (title) title.remove();
-    }
-    if (!includeTags) {
-      const tags = document.querySelector('.properties');
-      if (tags) tags.remove();
-    }
-    const links = document.querySelectorAll('div.notion-selectable.notion-table_of_contents-block > div > div > a');
-    links.forEach(link => {
-      const href = link.getAttribute('href');
-      const hashIndex = href.indexOf('#');
-      if (hashIndex !== -1) {
-        const hash = href.substring(hashIndex);
-        link.setAttribute('href', hash);
-        link.setAttribute('role', "");
-      } else {
-        console.log("Warning: No hash found in href:", href);
-      }
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-  }, { includeBanner, includeTitle, includeTags });
+    const page = await browser.newPage();
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
 
-  // 이미지 로딩 대기 (PDF 생성 전)
-  await page.evaluate(async () => {
-    const images = Array.from(document.querySelectorAll("img"));
-    await Promise.all(
-      images.map(img => {
-        if (img.complete) return;
-        return new Promise(resolve => {
-          img.addEventListener("load", resolve);
-          img.addEventListener("error", resolve);
-        });
-      })
-    );
-  });
+    // 초기에 기본 뷰포트 설정
+    await page.setViewport({ width: parseInt(width), height: 100 });
 
-  // 페이지 내 특정 요소의 높이를 재계산
-  const calculateBodyHeight = async () => {
-    return await page.evaluate(() => {
-      const targetElement = document.querySelector('#notion-app > div > div:nth-child(1) > div > div:nth-child(1) > main > div > div > div.whenContentEditable > div');
-      if (targetElement) {
-        const rect = targetElement.getBoundingClientRect();
-        console.log('Width:', rect.width, 'Height:', rect.height);
-        return Math.ceil(rect.height);
-      } else {
-        console.log('#notion-app 요소를 찾을 수 없습니다.');
-        return 1000; // 기본값 설정
+    // URL로 이동 (네트워크 정체가 없을 때까지 기다림)
+    await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+
+    // DOM 요소 제거 등 옵션에 따른 조작 실행
+    await page.evaluate((evalOptions) => {
+      const { includeBanner, includeTitle, includeTags } = evalOptions;
+      if (!includeBanner) {
+        const banner = document.querySelector('.page-cover-image');
+        if (banner) banner.remove();
       }
+      if (!includeTitle) {
+        const title = document.querySelector('.page-title');
+        if (title) title.remove();
+      }
+      if (!includeTags) {
+        const tags = document.querySelector('.properties');
+        if (tags) tags.remove();
+      }
+      // 링크 수정 (Notion 형식의 경우)
+      const links = document.querySelectorAll('div.notion-selectable.notion-table_of_contents-block > div > div > a');
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        const hashIndex = href.indexOf('#');
+        if (hashIndex !== -1) {
+          const hash = href.substring(hashIndex);
+          link.setAttribute('href', hash);
+          link.setAttribute('role', "");
+        } else {
+          console.log("Warning: No hash found in href:", href);
+        }
+      });
+    }, { includeBanner, includeTitle, includeTags });
+
+    // 모든 이미지가 로드될 때까지 대기 (최대한 PDF 변환에 반영)
+    await page.evaluate(async () => {
+      const selectors = Array.from(document.querySelectorAll("img"));
+      await Promise.all(
+        selectors.map(img => {
+          if (img.complete) return;
+          return new Promise((resolve) => {
+            img.addEventListener("load", resolve);
+            img.addEventListener("error", resolve);
+          });
+        })
+      );
     });
-  };
 
-  const bodyHeight = await calculateBodyHeight();
-  await page.setViewport({ width: parseInt(width), height: bodyHeight });
+    // 변환할 영역의 높이 계산 (Notion 형식의 선택자 사용)
+    const calculateBodyHeight = async () => {
+      return await page.evaluate(() => {
+        const targetElement = document.querySelector('#notion-app > div > div:nth-child(1) > div > div:nth-child(1) > main > div > div > div.whenContentEditable > div');
+        if (targetElement) {
+          const rect = targetElement.getBoundingClientRect();
+          console.log('Width:', rect.width, 'Height:', rect.height);
+          return Math.ceil(rect.height);
+        } else {
+          console.log('#notion-app 요소를 찾을 수 없습니다.');
+          return 1000; // 기본 높이
+        }
+      });
+    };
 
-  const pdfBuffer = await page.pdf({
-    width: width,
-    height: `${bodyHeight}px`,
-    printBackground: true,
-    displayHeaderFooter: false,
-    margin: { top: '0px', bottom: '0px', left: '0px', right: '0px' },
-    pageRanges: '1',
-    tagged: true,
-    outline: true,
-  });
-  console.log(`Successfully converted ${targetUrl} to PDF`);
-  
-  await browser.close();
-  return pdfBuffer;
-}
+    const bodyHeight = await calculateBodyHeight();
+    await page.setViewport({ width: parseInt(width), height: bodyHeight });
 
+    // PDF 생성 – 페이지 크기와 옵션 반영
+    const pdfBuffer = await page.pdf({
+      width: width,
+      height: `${bodyHeight}px`,
+      printBackground: true,
+      displayHeaderFooter: false,
+      margin: { top: '0px', bottom: '0px', left: '0px', right: '0px' },
+      pageRanges: '1',
+      tagged: true,
+      outline: true,
+    });
+
+    console.log(`Successfully converted ${targetUrl} to PDF`);
+    return pdfBuffer;
+  } catch (error) {
+    console.error(`Error converting URL ${targetUrl} to PDF:`, error);
+    throw error;
+  } finally {
+    if (browser) {
+      await browser.close();
+      console.log('Browser closed.');
+    }
+  }
+};
+
+// Vercel 서버리스 함수 엔트리 포인트
 module.exports = async (req, res) => {
-  // POST 메서드만 허용
   if (req.method !== 'POST') {
-    res.status(405).send({ error: 'Method Not Allowed. POST 메서드만 지원됩니다.' });
+    res.status(405).json({ error: 'Method Not Allowed' });
     return;
   }
 
-  // 요청 본문에서 필요한 데이터 추출
   const { url: targetUrl, width, includeBanner, includeTitle, includeTags } = req.body;
 
+  // URL 필수 체크 및 포맷 검증
   if (!targetUrl) {
-    res.status(400).json({ error: '요청 본문에 "url"이 포함되어야 합니다.' });
+    res.status(400).json({ error: 'Missing "url" in request body.' });
     return;
   }
-
   try {
-    new URL(targetUrl); // URL 유효성 검사
+    new URL(targetUrl);
   } catch (error) {
-    res.status(400).json({ error: '유효하지 않은 URL 형식입니다.' });
+    res.status(400).json({ error: 'Invalid URL format provided.' });
     return;
   }
 
-  // 옵션 객체 구성 (문자열로 전달된 true/false 처리)
+  // 옵션 객체 준비 (문자열 true/false를 boolean으로 변환)
   const options = {
     width: width || '1080px',
     includeBanner: String(includeBanner).toLowerCase() === 'true',
@@ -131,12 +146,12 @@ module.exports = async (req, res) => {
   };
 
   try {
-    // URL의 hash fragment 추출 (선택 사항)
+    // URL의 fragment가 존재하면 로그 남김 (옵션 처리 예시)
     let urlFragment = '';
     try {
       const parsedUrl = new URL(targetUrl);
       if (parsedUrl.hash) {
-        urlFragment = parsedUrl.hash.substring(1); // '#' 제거
+        urlFragment = parsedUrl.hash.substring(1);
         console.log('Extracted URL Fragment:', urlFragment);
       }
     } catch (fragmentError) {
@@ -145,27 +160,21 @@ module.exports = async (req, res) => {
 
     const pdfBuffer = await printPdfFromUrl(targetUrl, options);
 
-    // 파일 이름 생성 (호스트명 사용)
+    // 다운로드 파일명 생성 (호스트명 기반)
     let filename = "converted.pdf";
     try {
       const parsedUrl = new URL(targetUrl);
       filename = `${parsedUrl.hostname || 'page'}.pdf`;
-    } catch (e) {
-      // 파일 이름 생성 오류 무시
+    } catch {
+      // 별도 처리 없이 기본 파일명 사용
     }
 
-    // PDF 다운로드를 위한 헤더 설정
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
     res.setHeader('Content-Length', pdfBuffer.length);
-
-    // PDF 버퍼 전송
-    res.status(200).send(pdfBuffer);
-
+    res.send(pdfBuffer);
   } catch (error) {
-    console.error(`URL ${targetUrl} 처리 실패:`, error);
-    res.status(500).json({
-      error: 'URL을 PDF로 변환하는 중 오류가 발생했습니다. 서버 로그를 확인하세요.'
-    });
+    console.error(`Failed to process URL ${targetUrl}:`, error);
+    res.status(500).json({ error: 'Failed to convert URL to PDF and modify links. Check server logs for details.' });
   }
 };
