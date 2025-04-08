@@ -227,7 +227,7 @@ const { URL } = require('url'); // Built-in URL parser
 
 const app = express();
 // Vercel 환경에서는 포트 번호를 직접 지정할 필요가 없습니다.
-// const PORT = 3000;
+const PORT = 3000;
 
 // Middleware
 app.use(express.json());
