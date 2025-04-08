@@ -226,8 +226,8 @@ const fs = require('fs');
 const path = require('path');
 // const https = require('https');
 const { URL } = require('url'); // Built-in URL parser
-const pdfParse = require('pdf-parse'); // Import the pdf-parse library
-const { PDFDocument, rgb } = require('pdf-lib'); // Import PDFDocument and rgb from pdf-lib
+// const pdfParse = require('pdf-parse'); // Import the pdf-parse library
+// const { PDFDocument, rgb } = require('pdf-lib'); // Import PDFDocument and rgb from pdf-lib
 
 const app = express();
 const PORT = 3000;
