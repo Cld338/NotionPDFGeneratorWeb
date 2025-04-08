@@ -9,6 +9,7 @@
   "author": "cloudier338",
   "license": "ISC",
   "dependencies": {
+    "@sparticuz/chromium-min": "^133.0.0",
     "express": "^4.21.1",
     "express-fileupload": "^1.5.1",
     "mhtml-parser": "^1.0.2",
