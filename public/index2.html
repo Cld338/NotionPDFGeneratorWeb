@@ -1,36 +1,48 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notion Style PDF Converter</title>
+    <title>Notion PDF Converter</title>
     <link rel="stylesheet" href="/styles.css">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+
 </head>
 <body>
     <div class="container">
-        <h1 class="title">📄 Notion Style PDF Converter</h1>
+        <h1 class="title">📄 Notion PDF Converter</h1>
         <p class="subtitle">Upload your Notion ZIP file and configure your PDF export options.</p>
+        <p class="usage_url">
+            <a href="https://cloudier338.notion.site/Notion-PDF-Converter-14bfc609de7380b8a66bc34c682a2965" target="_blank">
+                📖 How to Use
+            </a>
+        </p>
 
         <form id="uploadForm" class="card" enctype="multipart/form-data">
-            <label class="file-upload">
-                <input type="file" id="zipFile" name="zipFile" accept=".zip" required>
-                <span id="fileLabel">Select ZIP File</span>
-            </label>
+            <div id="dropArea" class="drop-area">
+                <p class="drag-text">Drag & Drop</p>
+                <label class="file-upload">
+                    <input type="file" id="zipFile" name="zipFile" accept=".zip" required>
+                    <span id="fileLabel">Select ZIP File</span>
+                </label>
+            </div>
             <p id="selectedFileName" class="file-name"></p> <!-- Displays selected file name -->
+            <p class="file-limit">Maximum upload limit is 50MB.</p>
 
             <div class="options">
                 <label class="option">
-                    <input type="checkbox" id="includeBanner" name="includeBanner" checked>
+                    <input type="checkbox" id="includeBanner" name="includeBanner">
                     <span>Include Banner</span>
                 </label>
 
                 <label class="option">
-                    <input type="checkbox" id="includeTitle" name="includeTitle" checked>
+                    <input type="checkbox" id="includeTitle" name="includeTitle">
                     <span>Include Title</span>
                 </label>
 
                 <label class="option">
-                    <input type="checkbox" id="includeTags" name="includeTags" checked>
+                    <input type="checkbox" id="includeTags" name="includeTags">
                     <span>Include Tags</span>
                 </label>
 
@@ -42,9 +54,10 @@
 
             <button type="submit" class="submit-btn">Convert to PDF</button>
         </form>
+        
         <p id="message" class="message"></p>
+        <p id="progress" class="progress"></p>
     </div>
-
     <script>
         // Display selected file name
         document.getElementById('zipFile').addEventListener('change', function() {
@@ -75,6 +88,10 @@
                     method: 'POST',
                     body: formData
                 });
+                if (response.status === 413) {
+                    document.getElementById('message').innerText = 'File size exceeds the 50MB limit. Please upload a smaller file.';
+                    return;
+                }
                 if (response.ok) {
                     const blob = await response.blob();
                     const link = document.createElement('a');
@@ -82,7 +99,7 @@
                     link.download = 'pdfs.zip';
                     link.click();
                     document.getElementById('message').innerText = 'Conversion complete! Download started.';
-                } else {
+            	} else {
                     document.getElementById('message').innerText = 'Conversion failed. Please try again.';
                 }
             } catch (error) {
@@ -90,6 +107,43 @@
                 document.getElementById('message').innerText = 'An error occurred during conversion.';
             }
         };
+
+        // 웹소켓 연결
+        const socket = new WebSocket(`ws://${window.location.host}`);
+
+        socket.onmessage = function(event) {
+            document.getElementById('progress').innerText = event.data; // 진행 상황 업데이트
+        };
+
+        // 드래그 앤 드롭 기능 추가
+        const dropArea = document.getElementById('dropArea');
+
+        dropArea.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropArea.classList.add('active');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('active');
+        });
+
+        dropArea.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropArea.classList.remove('active');
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('zipFile').files = files;
+                document.getElementById('selectedFileName').innerText = files[0].name;
+            }
+        });
     </script>
 </body>
+    <footer>
+        <div>
+            <p class="github-link"> <a href="https://github.com/cld338" target="_blank">
+                <img src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white" alt=""></a>
+            </p> 
+        </div>
+    </footer>
 </html>
+

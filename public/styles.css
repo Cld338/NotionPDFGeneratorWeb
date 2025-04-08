@@ -1,0 +1,252 @@
+/* Reset some default styling */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    background-color: #f0f4f8;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Container for the form and logs */
+.container {
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
+    margin-top: 6em;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 2em;
+}
+
+/* Main title styling */
+.title {
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 0.5em;
+    color: black;
+}
+
+/* Subtitle styling */
+.subtitle {
+    color: #666;
+    font-size: 1.1em;
+    margin-bottom: 1em;
+}
+
+/* Card style for form */
+.card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 1.5em;
+    text-align: left;
+}
+
+/* Drag & Drop 텍스트 스타일 */
+.drag-text {
+    font-size: 1em;
+    font-weight: 500;
+    color: #666;
+    margin-top: 3em;
+    margin-bottom: 3em;
+    text-align: center;
+    
+}
+
+
+/* File upload button */
+.file-upload {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e2e2e2;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1em;
+}
+
+.file-upload:hover {
+    background-color: #d0d0d0;
+}
+
+.file-upload input {
+    display: none;
+}
+
+.file-upload span {
+    font-weight: 500;
+}
+/* 커스텀 체크박스 스타일 */
+/* 커스텀 체크박스 스타일 */
+.option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8em;
+    font-size: 0.95em;
+    position: relative;
+}
+
+.option input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #4a5568; /* 기본 테두리 색상 */
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+    position: relative;
+}
+
+.option input[type="checkbox"]:hover {
+    border-color: #3a78c2; /* 호버 시 테두리 색상 변경 */
+    background-color: #e2efff; /* 기본 상태에서만 배경 변경 */
+}
+
+.option input[type="checkbox"]:checked {
+    border-color: #4a90e2; /* 체크 시 테두리 색상 변경 */
+    background-color: #4a90e2; /* 체크 시 배경색 */
+}
+
+.option input[type="checkbox"]:checked:hover {
+    background-color: #4a90e2; /* 클릭 후 호버 시에도 배경색 유지 */
+    border-color: #3a78c2; /* 테두리만 변화 */
+}
+
+.option input[type="checkbox"]:checked::before {
+    content: '✔';
+    color: white;
+    font-size: 14px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.option span {
+    color: #333;
+    font-weight: 500;
+}
+
+/* Submit button */
+.submit-btn {
+    background-color: #3b82f6;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+    background-color: #2563eb;
+}
+
+/* Message styling */
+.file-name {
+    color: #555;
+    font-size: 0.9em;
+    margin: 8px 0 16px 0;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Footer 스타일 추가 */
+footer {
+    margin-top: auto;
+    text-align: center;
+    padding: 1em 0;
+}
+
+.drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 1em;
+    text-align: center;
+    transition: background-color 0.3s;
+    background-color: #f9f9f9;
+}
+
+.drop-area.active {
+    background-color: #e2e2e2;
+}
+
+/* 차분한 Usage URL 스타일링 */
+.usage_url a {
+    display: inline-block;
+    text-decoration: none;
+    color: #ffffff;
+    background-color: #4a5568; /* 차분한 회색톤 */
+    padding: 8px 18px;
+    border-radius: 5px;
+    font-size: 0.95em;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 부드러운 그림자 */
+    margin-bottom: 1em
+}
+
+.usage_url a:hover {
+    background-color: #2d3748; /* 어두운 회색으로 변경 */
+    transform: translateY(-1px); /* 부드럽게 위로 떠오르는 효과 */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* 호버 시 약간 더 진한 그림자 */
+}
+
+.usage_url a:active {
+    background-color: #1a202c; /* 클릭 시 더 어두운 색 */
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Convert to PDF 버튼 스타일 */
+.submit-btn {
+    background-color: #4a90e2; /* 기본 파란색 */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 부드러운 그림자 */
+}
+
+.submit-btn:hover {
+    background-color: #3a78c2; /* 약간 더 짙은 파란색 */
+    transform: translateY(-1px); /* 살짝 떠오르는 효과 */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* 호버 시 그림자 강조 */
+}
+
+.submit-btn:active {
+    background-color: #2a5a91; /* 클릭 시 더 짙은 파란색 */
+    transform: translateY(0); /* 클릭 시 원래 위치로 돌아감 */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 그림자를 줄여 클릭 효과 강조 */
+}
+.file-limit {
+    font-size: 0.8em; /* 작은 글씨 크기 */
+    color: rgba(128, 128, 128, 0.8); /* 연한 빨간색 */
+    margin-top: -10px; /* 간격 조정 */
+    margin-bottom: 10px; /* 간격 조정 */
+    text-align: center; /* 중앙 정렬 */
+}
