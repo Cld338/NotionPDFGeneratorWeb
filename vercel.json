@@ -1,9 +1,17 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.js", "use": "@vercel/node" }
+    { "src": "index.js", "use": "@vercel/node" },
+    {
+      "src": "api/convert-url.js",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/index2.js" }
+    { "src": "/(.*)", "dest": "/index2.js" },
+    {
+      "src": "/api/convert-url",
+      "dest": "/api/convert-url.js"
+    }
   ]
 }
