@@ -221,38 +221,34 @@
 
 // module.exports = app; // Export for potential testing or modular use
 const express = require('express');
-const puppeteer = require('puppeteer');
-// const fs = require('fs');
 const path = require('path');
-// const https = require('https');
-const { URL } = require('url'); // Built-in URL parser
-// const pdfParse = require('pdf-parse'); // Import the pdf-parse library
-// const { PDFDocument, rgb } = require('pdf-lib'); // Import PDFDocument and rgb from pdf-lib
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Middleware to parse JSON bodies
+// JSON 및 URL-encoded 요청 파싱
 app.use(express.json());
-// Middleware to parse URL-encoded bodies (optional, but good practice)
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (like your index.html if needed for the UI)
+// 정적 파일 제공 (public 폴더 내 index.html 등)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Vercel API 엔드포인트를 모방하는 라우트 구성 (예시)
+// 실제 PDF 변환 기능은 '/api/convert-url.js'에서 구현한 내용을 require 할 수도 있습니다.
+const convertUrlHandler = require('./api/convert-url');
+app.post('/convert-url', (req, res) => {
+  // Express에서 API 핸들러 실행 (Promise 반환 방식 고려)
+  convertUrlHandler(req, res);
+});
 
-// --- Root Route and Server Start ---
-// In server.js (should already be there)
-app.use(express.static(path.join(__dirname, 'public')));
-
+// 루트 경로: 정적 파일이 제공되므로 별도 라우트가 없어도 됨
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index2.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start HTTP server (or HTTPS if you uncomment the section below)
+// 로컬 서버 실행
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`); // Use HTTP for local dev
+  console.log(`서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
 });
-
 
 module.exports = app; // Export for potential testing or modular use
