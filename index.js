@@ -236,7 +236,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Vercel API 엔드포인트를 모방하는 라우트 구성 (예시)
 // 실제 PDF 변환 기능은 '/api/convert-url.js'에서 구현한 내용을 require 할 수도 있습니다.
 const convertUrlHandler = require('./api/convert-url');
-app.post('/convert-url', (req, res) => {
+app.post('/api/convert-url', (req, res) => {
   // Express에서 API 핸들러 실행 (Promise 반환 방식 고려)
   convertUrlHandler(req, res);
 });
